@@ -28,7 +28,7 @@ app.get('/', (req, res) => {
 
 // 2. Rota para Buscar Horários Ocupados (Usada pelo frontend ao selecionar a data)
 app.get('/api/agendamentos/horarios-ocupados', async (req, res) => {
-    const { data } = req.query; // Exemplo: ?data=2026-07-22
+    const { data } = req.query; // Exemplo: ?data=2026-07-27
 
     if (!data) {
         return res.status(400).json({ erro: 'O parâmetro data é obrigatório.' });

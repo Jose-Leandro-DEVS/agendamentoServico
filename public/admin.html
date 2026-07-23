@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo - Agendamentos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 sm:p-6 lg:p-8">
+
+    <div class="max-w-7xl mx-auto bg-white p-4 sm:p-6 lg:p-8 rounded-2xl shadow-xl border border-gray-200">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 pb-6 border-b border-gray-200">
+            <div>
+                <h2 class="text-2xl font-black text-gray-900">Painel Administrativo</h2>
+                <p class="text-sm text-gray-500">Gerencie todos os atendimentos e status dos clientes.</p>
+            </div>
+            
+            <!-- Filtros e Ações -->
+            <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                <input type="date" id="filtroData" class="border border-gray-300 rounded-lg p-2.5 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none flex-grow sm:flex-grow-0">
+                <button onclick="carregarAgendamentos()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition shadow-sm">Filtrar</button>
+                <button onclick="limparFiltro()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-semibold transition">Limpar</button>
+                <button onclick="carregarAgendamentos()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition shadow-sm">Atualizar Lista</button>
+            </div>
+        </div>
+
+        <!-- Tabela Responsiva -->
+        <div class="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
+            <table class="w-full text-left border-collapse min-w-[700px]">
+                <thead>
+                    <tr class="bg-gray-50 text-gray-600 text-xs uppercase tracking-wider font-bold">
+                        <th class="p-4">Cliente / Contato</th>
+                        <th class="p-4">Serviço</th>
+                        <th class="p-4">Data / Horário</th>
+                        <th class="p-4">Status</th>
+                        <th class="p-4 text-center">Ações de Gestão</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaAgendamentos" class="text-sm divide-y divide-gray-200 bg-white">
+                    <!-- Preenchido via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Uso de rotas relativas para funcionar perfeitamente em localhost e em produção
+        const API_URL = '/api/admin/agendamentos';
+
+        async function carregarAgendamentos() {
+            const dataFiltro = document.getElementById('filtroData').value;
+            let url = API_URL;
+            if (dataFiltro) url += `?data=${dataFiltro}`;
+
+            try {
+                const response = await fetch(url);
+                const agendamentos = await response.json();
+                const tbody = document.getElementById('tabelaAgendamentos');
+                tbody.innerHTML = '';
+
+                if (!Array.isArray(agendamentos) || agendamentos.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-400 font-medium">Nenhum agendamento encontrado.</td></tr>`;
+                    return;
+                }
+
+                agendamentos.forEach(a => {
+                    let corStatus = 'bg-yellow-100 text-yellow-800 border-yellow-200';
+                    if (a.status === 'CONFIRMADO') corStatus = 'bg-blue-100 text-blue-800 border-blue-200';
+                    if (a.status === 'CONCLUIDO') corStatus = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                    if (a.status === 'CANCELADO') corStatus = 'bg-rose-100 text-rose-800 border-rose-200';
+
+                    // Formata a data para padrão brasileiro na exibição se vier em AAAA-MM-DD
+                    let dataExibicao = a.data;
+                    if (a.data && a.data.includes('-')) {
+                        const partes = a.data.split('-');
+                        if (partes[0].length === 4) {
+                            dataExibicao = `${partes[2]}/${partes[1]}/${partes[0]}`;
+                        }
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-50 transition';
+                    tr.innerHTML = `
+                        <td class="p-4">
+                            <div class="font-bold text-gray-900">${a.nomeCliente}</div>
+                            <div class="text-xs text-gray-500 mt-0.5">📞 ${a.telefone}</div>
+                        </td>
+                        <td class="p-4 text-gray-700 font-medium">${a.servico}</td>
+                        <td class="p-4 text-gray-700 whitespace-nowrap">${dataExibicao} às <strong class="text-gray-900">${a.horario}</strong></td>
+                        <td class="p-4">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold border ${corStatus}">${a.status}</span>
+                        </td>
+                        <td class="p-4 text-center">
+                            <div class="flex items-center justify-center gap-2">
+                                <select onchange="alterarStatus(${a.id}, this.value)" class="border border-gray-300 rounded-lg text-xs p-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                    <option value="" disabled selected>Alterar Status</option>
+                                    <option value="AGENDADO">Agendado</option>
+                                    <option value="CONFIRMADO">Confirmado</option>
+                                    <option value="CONCLUIDO">Concluído</option>
+                                    <option value="CANCELADO">Cancelado</option>
+                                </select>
+                                <button onclick="excluir(${a.id})" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-2 rounded-lg text-xs font-semibold transition shadow-sm">Excluir</button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                console.error("Erro ao carregar painel:", error);
+            }
+        }
+
+        async function alterarStatus(id, novoStatus) {
+            try {
+                const response = await fetch(`${API_URL}/${id}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: novoStatus })
+                });
+                if (response.ok) {
+                    carregarAgendamentos();
+                } else {
+                    alert("Não foi possível alterar o status.");
+                }
+            } catch (error) {
+                alert("Erro de conexão ao alterar status.");
+            }
+        }
+
+        async function excluir(id) {
+            if (!confirm('Deseja realmente excluir permanentemente este agendamento?')) return;
+            try {
+                const response = await fetch(`${API_URL}/${id}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    carregarAgendamentos();
+                } else {
+                    alert("Não foi possível excluir o agendamento.");
+                }
+            } catch (error) {
+                alert("Erro de conexão ao excluir.");
+            }
+        }
+
+        function limparFiltro() {
+            document.getElementById('filtroData').value = '';
+            carregarAgendamentos();
+        }
+
+        // Carrega ao abrir a página
+        carregarAgendamentos();
+
+        // Atualiza a tabela automaticamente a cada 15 segundos
+        setInterval(carregarAgendamentos, 15000);
+    </script>
+</body>
+</html>

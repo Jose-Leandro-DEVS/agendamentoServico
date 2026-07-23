@@ -18,8 +18,8 @@ model Agendamento {
   servico     String
   data        String
   horario     String
-  status      String   @default("AGENDADO")
-  criadoEm    DateTime @default(now())
+  status      String   @default("CONFIRMADO")
+  createdAt   DateTime @default(now())
 
-  @@map("agendamentos")
+  @@map("agendamentos") // <-- Adicione esta linha indicando o nome real da tabela no banco
 }

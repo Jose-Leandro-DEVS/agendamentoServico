@@ -59,7 +59,8 @@
     </div>
 
     <script>
-        const API_URL = '/api/agendamentos'; // ou /api/admin/agendamentos
+        // Alterado para garantir que a rota aponte corretamente para o endpoint de horários ocupados criado no backend
+        const API_URL = '/api/agendamentos';
 
         // Lista padrão de horários disponíveis no dia
         const horariosDisponiveis = [
@@ -68,22 +69,24 @@
         ];
 
         const inputData = document.getElementById('data');
-        // Define a data mínima como o dia de hoje para impedir agendamentos retroativos
         inputData.min = new Date().toISOString().split('T')[0];
         
         const selectHorario = document.getElementById('horario');
 
-        // Sempre que o usuário mudar a data, busca na API os horários já ocupados
         inputData.addEventListener('change', async () => {
             const dataSelecionada = inputData.value;
             if (!dataSelecionada) return;
 
             try {
-                // Consulta a API do backend para saber quais horários já estão reservados
+                // Ajustado para bater exatamente com a rota criada no backend: /api/agendamentos/horarios-ocupados?data=...
                 const response = await fetch(`${API_URL}/horarios-ocupados?data=${dataSelecionada}`);
-                const horariosOcupados = await response.json(); // Ex: ["09:00", "14:00"]
+                
+                if (!response.ok) {
+                    throw new Error('Erro ao buscar horários ocupados');
+                }
 
-                // Reconstrói o select de horários
+                const horariosOcupados = await response.json(); 
+
                 selectHorario.innerHTML = '<option value="" disabled selected>Selecione um horário</option>';
 
                 horariosDisponiveis.forEach(h => {
@@ -91,7 +94,6 @@
                     option.value = h;
                     option.textContent = h;
 
-                    // Se o horário estiver na lista de ocupados, desabilita e avisa visualmente
                     if (horariosOcupados.includes(h)) {
                         option.disabled = true;
                         option.textContent += ' (Indisponível)';
@@ -102,10 +104,10 @@
                 });
             } catch (error) {
                 console.error("Erro ao buscar horários ocupados:", error);
+                selectHorario.innerHTML = '<option value="" disabled selected>Erro ao carregar horários</option>';
             }
         });
 
-        // Envio do formulário
         document.getElementById('formAgendamento').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -131,7 +133,6 @@
                     return;
                 }
 
-                // Exibe a tela de confirmação com os dados salvos
                 document.getElementById('formAgendamento').classList.add('hidden');
                 document.getElementById('mensagemSucesso').classList.remove('hidden');
                 

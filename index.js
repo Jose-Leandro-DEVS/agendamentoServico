@@ -16,10 +16,8 @@ const __dirname = path.dirname(__filename);
 app.use(cors());
 app.use(express.json());
 
-// 👉 ALTERAÇÃO PRINCIPAL: Servir o frontend estático a partir da pasta 'public'
+// Servir o frontend estático a partir da pasta 'public'
 app.use(express.static(path.join(__dirname, 'public')));
-
-// (Mantenha todas as suas rotas /api/... abaixo desta linha normalmente)
 
 // 1. Rota de Teste Básica
 app.get('/', (req, res) => {
@@ -55,13 +53,11 @@ app.get('/api/agendamentos/horarios-ocupados', async (req, res) => {
 app.post('/api/agendamentos', async (req, res) => {
     const { nomeCliente, telefone, servico, data, horario } = req.body;
 
-    // Validação básica dos campos obrigatórios
     if (!nomeCliente || !telefone || !servico || !data || !horario) {
         return res.status(400).json({ erro: 'Todos os campos são obrigatórios.' });
     }
 
     try {
-        // Regra de negócio: Verifica se o horário já está ocupado por segurança
         const ocupado = await prisma.agendamento.findFirst({
             where: { 
                 data: data, 
@@ -74,7 +70,6 @@ app.post('/api/agendamentos', async (req, res) => {
             return res.status(400).json({ erro: 'Este horário já está reservado.' });
         }
 
-        // Salva no banco de dados via Prisma
         const novoAgendamento = await prisma.agendamento.create({
             data: { 
                 nomeCliente, 
@@ -92,8 +87,7 @@ app.post('/api/agendamentos', async (req, res) => {
     }
 });
 
-// 4. Rota para Listar/Filtrar Agendamentos (com filtro opcional por ?data=YYYY-MM-DD)
-// Exemplo de como deve ficar a rota no seu backend:
+// 4. Rota para Listar/Filtrar Agendamentos no Admin (Com suporte opcional a ?data=YYYY-MM-DD)
 app.get('/api/admin/agendamentos', async (req, res) => {
     try {
         const { data } = req.query;
@@ -106,13 +100,14 @@ app.get('/api/admin/agendamentos', async (req, res) => {
         const agendamentos = await prisma.agendamento.findMany({
             where: filtro,
             orderBy: [
-                { data: 'desc' },   // Datas mais futuras/recentes primeiro
-                { horario: 'desc' } // Horários mais tarde primeiro
+                { data: 'desc' }, 
+                { horario: 'desc' }
             ]
         });
 
         res.json(agendamentos);
     } catch (error) {
+        console.error("Erro ao listar agendamentos:", error);
         res.status(500).json({ erro: "Erro ao buscar agendamentos" });
     }
 });
@@ -149,8 +144,8 @@ app.delete('/api/admin/agendamentos/:id', async (req, res) => {
     }
 });
 
-// Inicia o servidor na porta 3000
-const PORT = 3000;
+// Inicia o servidor na porta (Render usa process.env.PORT ou 3000 como fallback)
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT} (http://localhost:${PORT})`);
+    console.log(`Servidor rodando na porta ${PORT}`);
 });
